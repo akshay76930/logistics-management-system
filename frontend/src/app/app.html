@@ -1,0 +1,168 @@
+<main class="app-shell">
+  @if (!signedIn) {
+    <section class="login-layout">
+      <div class="login-brand">
+        <a class="brand-lockup" href="/" aria-label="Fleetflow home">
+          <span class="brand-mark"><span></span><span></span><span></span><span></span></span>
+          <span>fleetflow</span>
+        </a>
+        <div class="login-story">
+          <span class="eyebrow">YOUR OPERATIONS, IN MOTION</span>
+          <h1>Every delivery<br />has a story.</h1>
+          <p>Keep every truck, dock and delivery moving in the right direction.</p>
+        </div>
+        <span class="login-footnote">LOGISTICS, WITHOUT THE GUESSWORK.</span>
+      </div>
+      <form class="login-panel" (submit)="signIn($event)">
+        <div class="login-form">
+          <span class="eyebrow muted-eyebrow">WELCOME BACK</span>
+          <h2>Your dashboard awaits.</h2>
+          <p class="form-intro">Sign in to pick up right where you left off.</p>
+          @if (error) {
+            <div class="notice error-notice" role="alert">{{ error }}</div>
+          }
+          <label for="username">Username</label>
+          <input id="username" name="username" [(ngModel)]="username" autocomplete="username" placeholder="Enter your username" required />
+          <label for="password">Password</label>
+          <input id="password" name="password" [(ngModel)]="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+          <button class="primary-button login-button" type="submit" [disabled]="loginLoading">
+            {{ loginLoading ? 'Signing in…' : 'Sign in' }}
+            @if (!loginLoading) { <span aria-hidden="true">→</span> }
+          </button>
+          <p class="secure-note"><span class="secure-dot"></span>Your connection is secure and encrypted</p>
+        </div>
+      </form>
+    </section>
+  } @else {
+    <header class="topbar">
+      <a class="brand-lockup" href="/" aria-label="Fleetflow home">
+        <span class="brand-mark"><span></span><span></span><span></span><span></span></span>
+        <span>fleetflow</span>
+      </a>
+      <nav class="top-navigation" aria-label="Main navigation">
+        <a class="nav-link active" href="#dashboard"><span class="nav-symbol">▦</span> Dashboard</a>
+        <a class="nav-link" href="#records"><span class="nav-symbol">≡</span> Records</a>
+      </nav>
+      <div class="account-area">
+        <span class="live-indicator"><span></span> All systems operational</span>
+        <span class="account-divider"></span>
+        <span class="account-avatar">{{ username.charAt(0).toUpperCase() || 'U' }}</span>
+        <button class="sign-out-button" type="button" (click)="signOut()">Sign out <span aria-hidden="true">↗</span></button>
+      </div>
+    </header>
+
+    <main class="dashboard" id="dashboard">
+      <section class="welcome-row">
+        <div>
+          <div class="greeting"><span class="sun-icon">☀</span> YOUR DAILY OVERVIEW</div>
+          <h1>Good morning<span class="heading-dot">.</span></h1>
+          <p class="welcome-subtitle">Here's what's happening across your operation today.</p>
+        </div>
+        <div class="date-card"><span class="calendar-icon">▦</span><span>{{ dateToday | date:'EEEE, MMMM d, y' }}</span></div>
+      </section>
+
+      @if (error) {
+        <div class="notice error-notice dashboard-notice" role="alert">
+          <span>{{ error }}</span>
+          @if (!signedIn) {
+            <button type="button" (click)="signOut()">Sign in again</button>
+          }
+        </div>
+      }
+
+      <section class="metrics-grid" aria-label="Dashboard summary">
+        <article class="metric-card total-card">
+          <div class="metric-topline"><span class="metric-label">TOTAL RECORDS</span><span class="metric-icon total-icon">▤</span></div>
+          <div class="metric-value">{{ loading && !summary ? '—' : (summary?.total ?? 0) }}</div>
+          <div class="metric-caption">Across all operations</div>
+          <span class="metric-accent total-accent"></span>
+        </article>
+        <article class="metric-card pending-card">
+          <div class="metric-topline"><span class="metric-label">PENDING</span><span class="metric-icon pending-icon">◷</span></div>
+          <div class="metric-value">{{ loading && !summary ? '—' : (summary?.pending ?? 0) }}</div>
+          <div class="metric-caption"><span class="caption-dot pending-dot"></span>Awaiting action</div>
+          <span class="metric-accent pending-accent"></span>
+        </article>
+        <article class="metric-card progress-card">
+          <div class="metric-topline"><span class="metric-label">IN PROGRESS</span><span class="metric-icon progress-icon">↗</span></div>
+          <div class="metric-value">{{ loading && !summary ? '—' : (summary?.inProgress ?? 0) }}</div>
+          <div class="metric-caption"><span class="caption-dot progress-dot"></span>Currently on the move</div>
+          <span class="metric-accent progress-accent"></span>
+        </article>
+        <article class="metric-card completed-card">
+          <div class="metric-topline"><span class="metric-label">COMPLETED</span><span class="metric-icon completed-icon">✓</span></div>
+          <div class="metric-value">{{ loading && !summary ? '—' : (summary?.completed ?? 0) }}</div>
+          <div class="metric-caption"><span class="caption-dot completed-dot"></span>Successfully delivered</div>
+          <span class="metric-accent completed-accent"></span>
+        </article>
+      </section>
+
+      <section class="records-panel" id="records">
+        <div class="records-heading">
+          <div>
+            <div class="records-title-line"><h2>All records</h2><span class="record-count">{{ records.length }}</span></div>
+            <p class="records-subtitle">A closer look at every record in your operation.</p>
+          </div>
+          <div class="records-tools">
+            <label class="search-box">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input type="search" aria-label="Search all records" placeholder="Search records..." [(ngModel)]="filter" />
+              <kbd>/</kbd>
+            </label>
+            <button class="refresh-button" type="button" (click)="loadDashboard()" [disabled]="loading" aria-label="Refresh dashboard">
+              <span [class.spinning]="loading">↻</span>
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>TALLY</th><th>VEHICLE</th><th>RPS</th><th>WEIGHT</th><th>PACKAGES</th><th>EMPLOYEE</th><th>DOCK</th><th>RECORD STATUS</th><th>VEHICLE STATUS</th><th>CREATED</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (record of filteredRecords; track trackById($index, record); let index = $index) {
+                <tr>
+                  <td><span class="tally-value">#{{ record.tally }}</span></td>
+                  <td><span class="vehicle-cell"><span class="vehicle-icon" aria-hidden="true">▰</span>{{ record.vehicle }}</span></td>
+                  <td class="muted-cell">{{ record.rps || '—' }}</td>
+                  <td>{{ record.weight === null ? '—' : (record.weight | number:'1.0-2') }}<span class="unit-label">{{ record.weight === null ? '' : ' kg' }}</span></td>
+                  <td>{{ record.packages ?? '—' }}</td>
+                  <td><span class="employee-cell"><span class="employee-avatar" [style.background]="avatarColors[index % avatarColors.length]">{{ (record.assignedEmployee || '?').charAt(0).toUpperCase() }}</span>{{ record.assignedEmployee || 'Unassigned' }}</span></td>
+                  <td><span class="dock-pill">{{ record.dockName || '—' }}</span></td>
+                  <td><span class="status-pill" [class]="statusClass(record.recordStatus)">
+                    <span class="status-dot"></span>{{ record.recordStatus.replace('_', ' ') }}
+                  </span></td>
+                  <td>
+                    <span class="status-pill" [class]="statusClass(record.vehicleStatus)">
+                      <span class="status-dot"></span>{{ record.vehicleStatus || 'Unknown' }}
+                    </span>
+                  </td>
+                  <td>{{ record.createdAt | date:'MMM d, y, h:mm a' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td class="empty-cell" colspan="10">
+                    @if (loading) {
+                      <span class="empty-icon">◌</span><strong>Loading records</strong><span>Just a moment while we sync your operation.</span>
+                    } @else if (filter) {
+                      <span class="empty-icon">⌕</span><strong>No matching records</strong><span>Try adjusting your search.</span>
+                    } @else {
+                      <span class="empty-icon">☀</span><strong>No records yet</strong><span>Records from your database will show up here.</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span>Showing <strong>{{ filteredRecords.length }}</strong> of <strong>{{ records.length }}</strong> records</span>
+          <span class="footer-live"><span></span> Live data</span>
+        </div>
+      </section>
+      <footer class="dashboard-footer"><span>Made for the people who keep things moving.</span><span>FLEETFLOW <span class="footer-divider">·</span> OPERATIONS, IN MOTION</span></footer>
+    </main>
+  }
+</main>
