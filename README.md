@@ -59,6 +59,9 @@ Returns an access token and its expiry in seconds.
 
 `GET /api/dashboard/summary`
 
+Counts records created today, grouped by their current lifecycle status. The
+backend's local date determines the day boundary.
+
 Example response:
 
 ```json
@@ -79,6 +82,13 @@ Returns all persisted records ordered newest first, including `id`, `tally`,
 `vehicleStatus`, `recordStatus`, and `createdAt`.
 
 Pass the token from the login response in the `Authorization: Bearer <token>`
-header for both dashboard endpoints. The summary lifecycle statuses are
+header for protected dashboard APIs. The summary lifecycle statuses are
 `PENDING`, `IN_PROGRESS`, and `COMPLETED`; vehicle status is a separate record
 field.
+
+### Mark loading complete
+
+`POST /api/dashboard/{id}/mark-complete`
+
+Marks the record as `COMPLETED` and returns the updated record. The dashboard
+refreshes its records and summary after this request succeeds.

@@ -1,6 +1,8 @@
 package com.logistics.dashboard.api;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +26,10 @@ public class DashboardController {
     @GetMapping("/details")
     public List<DashboardDetailResponse> getAllRecords() {
         return dashboardService.getAllRecords();
+    }
+
+    @PostMapping("/{id}/mark-complete")
+    public DashboardDetailResponse markComplete(@PathVariable Long id) {
+        return dashboardService.markComplete(id);
     }
 }

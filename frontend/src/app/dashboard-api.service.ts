@@ -40,23 +40,42 @@ export class DashboardApiService {
     return this.getWithToken<DashboardRecord[]>('/dashboard/details');
   }
 
+  markComplete(recordId: number): Observable<DashboardRecord> {
+    return this.requestWithToken<DashboardRecord>(
+      'POST',
+      `/dashboard/${recordId}/mark-complete`,
+      'Could not complete the loading process.'
+    );
+  }
+
   private getWithToken<T>(path: string): Observable<T> {
+    return this.requestWithToken<T>('GET', path);
+  }
+
+  private requestWithToken<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    fallback = 'Could not load dashboard.'
+  ): Observable<T> {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       return throwError(() => new Error('Sign in to load your dashboard.'));
     }
 
-    return this.http
-      .get<T>(`${this.baseUrl}${path}`, {
-        headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
-      })
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+    const request =
+      method === 'POST'
+        ? this.http.post<T>(`${this.baseUrl}${path}`, {}, { headers })
+        : this.http.get<T>(`${this.baseUrl}${path}`, { headers });
+
+    return request
       .pipe(
         catchError((error: HttpErrorResponse) => {
           if (error.status === 401) {
             this.clearToken();
             return throwError(() => new Error('Your session expired. Please sign in again.'));
           }
-          return throwError(() => new Error(this.getErrorMessage(error, 'Could not load dashboard.')));
+          return throwError(() => new Error(this.getErrorMessage(error, fallback)));
         })
       );
   }

@@ -72,27 +72,27 @@
 
       <section class="metrics-grid" aria-label="Dashboard summary">
         <article class="metric-card total-card">
-          <div class="metric-topline"><span class="metric-label">TOTAL RECORDS</span><span class="metric-icon total-icon">▤</span></div>
+          <div class="metric-topline"><span class="metric-label">TOTAL TODAY</span><span class="metric-icon total-icon">▤</span></div>
           <div class="metric-value">{{ loading && !summary ? '—' : (summary?.total ?? 0) }}</div>
-          <div class="metric-caption">Across all operations</div>
+          <div class="metric-caption">Records created today</div>
           <span class="metric-accent total-accent"></span>
         </article>
         <article class="metric-card pending-card">
-          <div class="metric-topline"><span class="metric-label">PENDING</span><span class="metric-icon pending-icon">◷</span></div>
+          <div class="metric-topline"><span class="metric-label">PENDING TODAY</span><span class="metric-icon pending-icon">◷</span></div>
           <div class="metric-value">{{ loading && !summary ? '—' : (summary?.pending ?? 0) }}</div>
-          <div class="metric-caption"><span class="caption-dot pending-dot"></span>Awaiting action</div>
+          <div class="metric-caption"><span class="caption-dot pending-dot"></span>Created today · awaiting action</div>
           <span class="metric-accent pending-accent"></span>
         </article>
         <article class="metric-card progress-card">
-          <div class="metric-topline"><span class="metric-label">IN PROGRESS</span><span class="metric-icon progress-icon">↗</span></div>
+          <div class="metric-topline"><span class="metric-label">IN PROGRESS TODAY</span><span class="metric-icon progress-icon">↗</span></div>
           <div class="metric-value">{{ loading && !summary ? '—' : (summary?.inProgress ?? 0) }}</div>
-          <div class="metric-caption"><span class="caption-dot progress-dot"></span>Currently on the move</div>
+          <div class="metric-caption"><span class="caption-dot progress-dot"></span>Created today · in progress</div>
           <span class="metric-accent progress-accent"></span>
         </article>
         <article class="metric-card completed-card">
-          <div class="metric-topline"><span class="metric-label">COMPLETED</span><span class="metric-icon completed-icon">✓</span></div>
+          <div class="metric-topline"><span class="metric-label">COMPLETED TODAY</span><span class="metric-icon completed-icon">✓</span></div>
           <div class="metric-value">{{ loading && !summary ? '—' : (summary?.completed ?? 0) }}</div>
-          <div class="metric-caption"><span class="caption-dot completed-dot"></span>Successfully delivered</div>
+          <div class="metric-caption"><span class="caption-dot completed-dot"></span>Created today · completed</div>
           <span class="metric-accent completed-accent"></span>
         </article>
       </section>
@@ -118,7 +118,7 @@
           <table>
             <thead>
               <tr>
-                <th>TALLY</th><th>VEHICLE</th><th>RPS</th><th>WEIGHT</th><th>PACKAGES</th><th>EMPLOYEE</th><th>DOCK</th><th>RECORD STATUS</th><th>VEHICLE STATUS</th><th>CREATED</th>
+                <th>TALLY</th><th>VEHICLE</th><th>RPS</th><th>WEIGHT</th><th>PACKAGES</th><th>EMPLOYEE</th><th>DOCK</th><th>RECORD STATUS</th><th>ACTION</th><th>VEHICLE STATUS</th><th>CREATED</th>
               </tr>
             </thead>
             <tbody>
@@ -131,9 +131,16 @@
                   <td>{{ record.packages ?? '—' }}</td>
                   <td><span class="employee-cell"><span class="employee-avatar" [style.background]="avatarColors[index % avatarColors.length]">{{ (record.assignedEmployee || '?').charAt(0).toUpperCase() }}</span>{{ record.assignedEmployee || 'Unassigned' }}</span></td>
                   <td><span class="dock-pill">{{ record.dockName || '—' }}</span></td>
-                  <td><span class="status-pill" [class]="statusClass(record.recordStatus)">
-                    <span class="status-dot"></span>{{ record.recordStatus.replace('_', ' ') }}
-                  </span></td>
+                  <td>
+                    <span class="status-pill" [class]="statusClass(record.recordStatus)">
+                      <span class="status-dot"></span>{{ record.recordStatus.replace('_', ' ') }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="initiate-loading-button" type="button" (click)="openLoadingProcess(record)" [disabled]="record.recordStatus === 'COMPLETED'">
+                      {{ record.recordStatus === 'COMPLETED' ? 'Completed' : 'Launch' }}
+                    </button>
+                  </td>
                   <td>
                     <span class="status-pill" [class]="statusClass(record.vehicleStatus)">
                       <span class="status-dot"></span>{{ record.vehicleStatus || 'Unknown' }}
@@ -143,7 +150,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td class="empty-cell" colspan="10">
+                  <td class="empty-cell" colspan="11">
                     @if (loading) {
                       <span class="empty-icon">◌</span><strong>Loading records</strong><span>Just a moment while we sync your operation.</span>
                     } @else if (filter) {
@@ -164,5 +171,41 @@
       </section>
       <footer class="dashboard-footer"><span>Made for the people who keep things moving.</span><span>FLEETFLOW <span class="footer-divider">·</span> OPERATIONS, IN MOTION</span></footer>
     </main>
+
+    @if (selectedRecord; as loadingRecord) {
+      <div class="modal-backdrop" (click)="closeLoadingProcess()" (keydown.escape)="closeLoadingProcess()" tabindex="-1">
+        <section class="loading-modal" role="dialog" aria-modal="true" aria-labelledby="loading-modal-title" (click)="$event.stopPropagation()">
+          <div class="loading-modal-heading">
+            <div>
+              <span class="eyebrow muted-eyebrow">LOADING WORKFLOW</span>
+              <h2 id="loading-modal-title">Loading Process</h2>
+              <p>Review the shipment details before marking this loading process complete.</p>
+            </div>
+            <button class="modal-close-button" type="button" (click)="closeLoadingProcess()" [disabled]="completingRecordId !== null" aria-label="Close loading process">×</button>
+          </div>
+          <div class="loading-details">
+            <div><span>Record</span><strong>#{{ loadingRecord.tally }}</strong></div>
+            <div><span>Vehicle</span><strong>{{ loadingRecord.vehicle }}</strong></div>
+            <div><span>Dock</span><strong>{{ loadingRecord.dockName || 'Not assigned' }}</strong></div>
+            <div><span>Assigned employee</span><strong>{{ loadingRecord.assignedEmployee || 'Unassigned' }}</strong></div>
+            <div><span>Packages</span><strong>{{ loadingRecord.packages ?? '—' }}</strong></div>
+            <div><span>Weight</span><strong>{{ loadingRecord.weight === null ? '—' : (loadingRecord.weight | number:'1.0-2') + ' kg' }}</strong></div>
+          </div>
+          <label class="loading-confirmation">
+            <input type="checkbox" [(ngModel)]="loadingConfirmed" />
+            <span>I confirm the shipment is loaded and secure.</span>
+          </label>
+          @if (loadingError) {
+            <div class="notice error-notice loading-error" role="alert">{{ loadingError }}</div>
+          }
+          <div class="loading-modal-actions">
+            <button class="secondary-button" type="button" (click)="closeLoadingProcess()" [disabled]="completingRecordId !== null">Cancel</button>
+            <button class="complete-loading-button" type="button" (click)="markComplete()" [disabled]="!loadingConfirmed || completingRecordId === loadingRecord.id">
+              {{ completingRecordId === loadingRecord.id ? 'Saving…' : 'Mark Complete' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    }
   }
 </main>

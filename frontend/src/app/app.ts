@@ -16,6 +16,7 @@ export class App implements OnInit, OnDestroy {
   private readonly api = inject(DashboardApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private refreshSubscription?: Subscription;
+  private completionSubscription?: Subscription;
 
   readonly dateToday = new Date();
   readonly avatarColors = ['#e9d9c9', '#d2e0d4', '#e7d3d5', '#d5d9ec', '#e9e2ca'];
@@ -28,6 +29,10 @@ export class App implements OnInit, OnDestroy {
   signedIn = this.api.hasToken;
   summary: DashboardSummary | null = null;
   records: DashboardRecord[] = [];
+  selectedRecord: DashboardRecord | null = null;
+  completingRecordId: number | null = null;
+  loadingConfirmed = false;
+  loadingError = '';
 
   ngOnInit(): void {
     if (this.signedIn) this.loadDashboard();
@@ -35,6 +40,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.completionSubscription?.unsubscribe();
   }
 
   get filteredRecords(): DashboardRecord[] {
@@ -77,11 +83,65 @@ export class App implements OnInit, OnDestroy {
   }
 
   signOut(): void {
+    this.completionSubscription?.unsubscribe();
+    this.completionSubscription = undefined;
     this.api.clearToken();
     this.signedIn = false;
     this.summary = null;
     this.records = [];
+    this.selectedRecord = null;
+    this.completingRecordId = null;
+    this.loadingConfirmed = false;
+    this.loadingError = '';
     this.error = '';
+  }
+
+  openLoadingProcess(record: DashboardRecord): void {
+    if (record.recordStatus === 'COMPLETED') return;
+    this.selectedRecord = record;
+    this.loadingConfirmed = false;
+    this.loadingError = '';
+  }
+
+  closeLoadingProcess(): void {
+    if (this.completingRecordId !== null) return;
+    this.selectedRecord = null;
+    this.loadingConfirmed = false;
+    this.loadingError = '';
+  }
+
+  markComplete(): void {
+    const record = this.selectedRecord;
+    if (!record || !this.loadingConfirmed || this.completingRecordId !== null) return;
+
+    this.completingRecordId = record.id;
+    this.loadingError = '';
+    this.completionSubscription = this.api
+      .markComplete(record.id)
+      .pipe(
+        finalize(() => {
+          this.completingRecordId = null;
+          this.completionSubscription = undefined;
+          this.changeDetector.markForCheck();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.selectedRecord = null;
+          this.loadingConfirmed = false;
+          this.loadDashboard();
+        },
+        error: (error: Error | HttpErrorResponse) => {
+          this.loadingError = error.message || 'Could not complete the loading process.';
+          if (this.loadingError.includes('sign in again')) {
+            this.signedIn = false;
+            this.summary = null;
+            this.records = [];
+            this.selectedRecord = null;
+            this.loadingConfirmed = false;
+          }
+        },
+      });
   }
 
   loadDashboard(): void {
