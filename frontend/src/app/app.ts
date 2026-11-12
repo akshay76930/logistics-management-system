@@ -59,6 +59,15 @@ export class App implements OnInit, OnDestroy {
     );
   }
 
+  get timeGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 5) return 'Good night';
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good night';
+  }
+
   signIn(event: Event): void {
     event.preventDefault();
     this.error = '';
